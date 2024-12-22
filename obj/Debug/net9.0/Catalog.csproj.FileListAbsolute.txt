@@ -124,3 +124,4 @@
 /Users/ademceper/Desktop/eCommerce/Services/Catalog/bin/Debug/net9.0/Swashbuckle.AspNetCore.Swagger.dll
 /Users/ademceper/Desktop/eCommerce/Services/Catalog/bin/Debug/net9.0/Swashbuckle.AspNetCore.SwaggerGen.dll
 /Users/ademceper/Desktop/eCommerce/Services/Catalog/bin/Debug/net9.0/Swashbuckle.AspNetCore.SwaggerUI.dll
+/Users/ademceper/Desktop/eCommerce/Services/Catalog/obj/Debug/net9.0/Catalog.sourcelink.json

@@ -13,10 +13,10 @@ public class CategoryController : ControllerBase
 
     // Kategori oluşturma
     [HttpPost]
-    public async Task<ActionResult<ResultDto>> CreateCategory([FromBody] CategoryCreateDto categoryCreateDto)
+    public async Task<ActionResult<ResultDto>> CreateCategory([FromBody] CategoryCreateDto categoryCreateDto, CancellationToken cancellationToken)
     {
         var createdBy = "system"; // Kullanıcı adı burada geçerli bir şekilde alınmalı
-        var result = await _categoryService.CreateCategoryAsync(categoryCreateDto, createdBy);
+        var result = await _categoryService.CreateCategoryAsync(categoryCreateDto, createdBy, cancellationToken);
         if (result.Success)
         {
             return Ok(result);
@@ -27,9 +27,9 @@ public class CategoryController : ControllerBase
 
     // ID'ye göre kategori getirme
     [HttpGet("{id}")]
-    public async Task<ActionResult<GetByIdCategoryDto>> GetCategoryById(Guid id)
+    public async Task<ActionResult<GetByIdCategoryDto>> GetCategoryById(Guid id, CancellationToken cancellationToken)
     {
-        var category = await _categoryService.GetCategoryByIdAsync(id);
+        var category = await _categoryService.GetCategoryByIdAsync(id, cancellationToken);
         if (category == null)
         {
             return NotFound(new { Message = "Kategori bulunamadı." });
@@ -40,18 +40,18 @@ public class CategoryController : ControllerBase
 
     // Tüm kategorileri getirme
     [HttpGet]
-    public async Task<ActionResult<List<GetByIdCategoryDto>>> GetAllCategories()
+    public async Task<ActionResult<List<GetByIdCategoryDto>>> GetAllCategories(CancellationToken cancellationToken)
     {
-        var categories = await _categoryService.GetAllCategoriesAsync();
+        var categories = await _categoryService.GetAllCategoriesAsync(cancellationToken);
         return Ok(categories);
     }
 
     // Kategori güncelleme
     [HttpPut("{id}")]
-    public async Task<ActionResult<ResultDto>> UpdateCategory(Guid id, [FromBody] CategoryUpdateDto categoryUpdateDto)
+    public async Task<ActionResult<ResultDto>> UpdateCategory(Guid id, [FromBody] CategoryUpdateDto categoryUpdateDto, CancellationToken cancellationToken)
     {
         var updatedBy = "system"; // Kullanıcı adı burada geçerli bir şekilde alınmalı
-        var result = await _categoryService.UpdateCategoryAsync(id, categoryUpdateDto, updatedBy);
+        var result = await _categoryService.UpdateCategoryAsync(id, categoryUpdateDto, updatedBy, cancellationToken);
         if (result.Success)
         {
             return Ok(result);
@@ -62,10 +62,10 @@ public class CategoryController : ControllerBase
 
     // Kategori silme
     [HttpDelete("{id}")]
-    public async Task<ActionResult<ResultDto>> DeleteCategory(Guid id)
+    public async Task<ActionResult<ResultDto>> DeleteCategory(Guid id, CancellationToken cancellationToken)
     {
         var deletedBy = "system"; // Kullanıcı adı burada geçerli bir şekilde alınmalı
-        var result = await _categoryService.DeleteCategoryAsync(id, deletedBy);
+        var result = await _categoryService.DeleteCategoryAsync(id, deletedBy, cancellationToken);
         if (result.Success)
         {
             return Ok(result);

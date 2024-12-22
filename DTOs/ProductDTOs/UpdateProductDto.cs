@@ -10,14 +10,9 @@ public class ProductUpdateDto
     public int StockQuantity { get; set; }  // Mevcut stok miktarı
     public bool IsFeatured { get; set; }  // Öne çıkan ürün mü?
     public Guid CategoryId { get; set; }  // Kategori ID'si
-
-    // İlişkiler
-    public List<Guid> VariantIds { get; set; }  // Varyant ID'leri
-    public List<Guid> ImageIds { get; set; }  // Fotoğraf ID'leri
-    public List<Guid> TagIds { get; set; }  // Etiket ID'leri
-    public List<Guid> AttributeIds { get; set; }  // Özellik ID'leri
-
-    // Elasticsearch Entegrasyonu
+    public List<ProductVariantUpdateDto> Variants { get; set; }  // Ürün varyantları
+    public List<ProductImageUpdateDto> Images { get; set; }  // Ürün fotoğrafları
+    public List<ProductAttributeUpdateDto> Attributes { get; set; }  // Ürün özellikleri (örneğin: renk, beden vb.)
     public string SearchIndex { get; set; }  // Elasticsearch arama endeksi
-    public bool IsSearchable { get; set; }  // Elasticsearch'ün arama sistemine dahil olup olmadığı
+    public bool IsSearchable { get; set; }  // Elasticsearch'e dahil edilip edilmeyeceği
 }

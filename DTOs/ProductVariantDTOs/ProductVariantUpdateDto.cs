@@ -1,7 +1,5 @@
-public class ProductVariant : BaseEntity
+public class ProductVariantUpdateDto
 {
-    public Guid ProductId { get; set; }
-    public Product Product { get; set; }
     public string VariantName { get; set; }  // Varyant adı (örneğin, renk, beden)
     public string VariantValue { get; set; }  // Varyant değeri (örneğin, kırmızı, M)
 
@@ -12,5 +10,5 @@ public class ProductVariant : BaseEntity
     public string SKU { get; set; }  // Ürün varyantı için SKU (Stok Kod Numarası)
     public string ImageUrl { get; set; }  // Varyantın resim URL'si (isteğe bağlı)
 
-    public List<ProductVariantAttribute> Attributes { get; set; }  // Varyantın özellikleri (örneğin, renk, beden gibi)
+    public List<ProductVariantAttributeUpdateDto> Attributes { get; set; }  // Varyantın özellikleri
 }

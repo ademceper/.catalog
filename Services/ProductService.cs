@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using System.Linq;
 
 public class ProductService : IProductService
 {
@@ -9,7 +10,7 @@ public class ProductService : IProductService
         _context = context;
     }
 
-    public async Task<ResultDto> CreateProductAsync(ProductCreateDto productCreateDto, string createdBy)
+    public async Task<ResultDto> CreateProductAsync(ProductCreateDto productCreateDto, string createdBy, CancellationToken cancellationToken = default)
     {
         if (productCreateDto == null)
         {
@@ -22,7 +23,6 @@ public class ProductService : IProductService
             };
         }
 
-        // Yeni ürün oluşturuluyor
         var product = new Product
         {
             Name = productCreateDto.Name,
@@ -41,59 +41,86 @@ public class ProductService : IProductService
             IsSearchable = productCreateDto.IsSearchable
         };
 
-        if (productCreateDto.Variants != null && productCreateDto.Variants.Any())
-        {
-            product.Variants = productCreateDto.Variants.Select(v => new ProductVariant
-            {
-                VariantName = v.VariantName,
-                VariantValue = v.VariantValue,
-                Price = v.Price,
-                DiscountedPrice = v.DiscountedPrice,
-                StockQuantity = v.StockQuantity,
-                SKU = v.SKU,
-                ImageUrl = v.ImageUrl,
-                CreatedBy = createdBy,
-                UpdatedBy = createdBy,
-                Attributes = v.Attributes.Select(a => new ProductVariantAttribute
-                {
-                    AttributeName = a.AttributeName,
-                    AttributeValue = a.AttributeValue,
-                    CreatedBy = createdBy,
-                    UpdatedBy = createdBy
-                }).ToList()
-            }).ToList();
-        }
-
-        if (productCreateDto.Images != null && productCreateDto.Images.Any())
-        {
-            product.Images = productCreateDto.Images.Select(i => new ProductImage
-            {
-                ImageUrl = i.ImageUrl,
-                IsPrimary = i.IsPrimary,
-                CreatedBy = createdBy,
-                UpdatedBy = createdBy
-            }).ToList();
-        }
-
-        if (productCreateDto.Attributes != null && productCreateDto.Attributes.Any())
-        {
-            product.Attributes = productCreateDto.Attributes.Select(a => new ProductAttribute
-            {
-                AttributeName = a.AttributeName,
-                AttributeValue = a.AttributeValue,
-                CreatedBy = createdBy,
-                UpdatedBy = createdBy
-            }).ToList();
-        }
-
         try
         {
-            _context.Products.Add(product);
-            await _context.SaveChangesAsync();
+            await _context.Products.AddAsync(product, cancellationToken);
+            await _context.SaveChangesAsync(cancellationToken); 
+
+            var productId = product.Id;
+
+            if (productCreateDto.Variants != null)
+            {
+                foreach (var v in productCreateDto.Variants)
+                {
+                    var productVariant = new ProductVariant
+                    {
+                        ProductId = productId,
+                        VariantName = v.VariantName,
+                        VariantValue = v.VariantValue,
+                        Price = v.Price,
+                        DiscountedPrice = v.DiscountedPrice,
+                        StockQuantity = v.StockQuantity,
+                        SKU = v.SKU,
+                        ImageUrl = v.ImageUrl,
+                        CreatedBy = createdBy,
+                        UpdatedBy = createdBy
+                    };
+
+                    if (v.Attributes != null)
+                    {
+                        productVariant.Attributes = v.Attributes.Select(a => new ProductVariantAttribute
+                        {
+                            AttributeName = a.AttributeName,
+                            AttributeValue = a.AttributeValue,
+                            CreatedBy = createdBy,
+                            UpdatedBy = createdBy
+                        }).ToList();
+                    }
+
+                    _context.ProductVariants.Add(productVariant);
+                }
+            }
+
+            if (productCreateDto.Images != null)
+            {
+                foreach (var i in productCreateDto.Images)
+                {
+                    var productImage = new ProductImage
+                    {
+                        ProductId = productId,
+                        ImageUrl = i.ImageUrl,
+                        IsPrimary = i.IsPrimary,
+                        CreatedBy = createdBy,
+                        UpdatedBy = createdBy
+                    };
+
+                    _context.ProductImages.Add(productImage);
+                }
+            }
+
+            if (productCreateDto.Attributes != null)
+            {
+                foreach (var a in productCreateDto.Attributes)
+                {
+                    var productAttribute = new ProductAttribute
+                    {
+                        ProductId = productId, 
+                        AttributeName = a.AttributeName,
+                        AttributeValue = a.AttributeValue,
+                        CreatedBy = createdBy,
+                        UpdatedBy = createdBy
+                    };
+
+                    _context.ProductAttributes.Add(productAttribute);
+                }
+            }
+
+            await _context.SaveChangesAsync(cancellationToken);
+
             return new ResultDto
             {
                 Success = true,
-                Message = "Ürün başarıyla oluşturuldu.",
+                Message = "Ürün ve ilişkili öğeler başarıyla oluşturuldu.",
                 Data = product.Id,
                 Code = "201"
             };
@@ -110,9 +137,10 @@ public class ProductService : IProductService
         }
     }
 
-    public async Task<ResultDto> UpdateProductAsync(Guid id, ProductUpdateDto productUpdateDto, string updatedBy)
+
+    public async Task<ResultDto> UpdateProductAsync(Guid id, ProductUpdateDto productUpdateDto, string updatedBy, CancellationToken cancellationToken = default)
     {
-        var product = await _context.Products.FindAsync(id);
+        var product = await _context.Products.FirstOrDefaultAsync(p => p.Id == id && p.IsActive, cancellationToken);
 
         if (product == null)
         {
@@ -140,7 +168,7 @@ public class ProductService : IProductService
 
         try
         {
-            await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync(cancellationToken);
             return new ResultDto
             {
                 Success = true,
@@ -161,11 +189,11 @@ public class ProductService : IProductService
         }
     }
 
-    public async Task<ResultDto> GetProductByIdAsync(Guid id)
+    public async Task<ResultDto> GetProductByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var product = await _context.Products
+        var productDto = await _context.Products
             .AsNoTracking()
-            .Where(p => p.Id == id)
+            .Where(p => p.Id == id && p.IsActive)
             .Select(p => new GetByIdProductDto
             {
                 Id = p.Id,
@@ -184,9 +212,9 @@ public class ProductService : IProductService
                     Name = p.Category.Name
                 }
             })
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(cancellationToken);
 
-        if (product == null)
+        if (productDto == null)
         {
             return new ResultDto
             {
@@ -201,12 +229,12 @@ public class ProductService : IProductService
         {
             Success = true,
             Message = "Ürün başarıyla getirildi.",
-            Data = product,
+            Data = productDto,
             Code = "200"
         };
     }
 
-    public async Task<ResultDto> GetAllProductsAsync()
+    public async Task<ResultDto> GetAllProductsAsync(CancellationToken cancellationToken = default)
     {
         var products = await _context.Products
             .AsNoTracking()
@@ -219,7 +247,7 @@ public class ProductService : IProductService
                 Price = p.Price,
                 IsFeatured = p.IsFeatured
             })
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         return new ResultDto
         {
@@ -230,9 +258,57 @@ public class ProductService : IProductService
         };
     }
 
-    public async Task<ResultDto> DeleteProductAsync(Guid id, string deletedBy)
+    public async Task<ResultDto> SearchProductsAsync(string query, CancellationToken cancellationToken = default)
     {
-        var product = await _context.Products.FindAsync(id);
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return new ResultDto
+            {
+                Success = false,
+                Message = "Geçersiz arama terimi.",
+                ValidationErrors = new List<string> { "Arama terimi boş olamaz." },
+                Code = "400"
+            };
+        }
+
+        var products = await _context.Products
+            .Where(p => p.IsActive && 
+                        (p.Name.Contains(query) || p.Description.Contains(query))) 
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+
+        if (products == null || !products.Any())
+        {
+            return new ResultDto
+            {
+                Success = false,
+                Message = "Arama sonuçları bulunamadı.",
+                ValidationErrors = new List<string> { "Arama kriterine uyan ürün bulunamadı." },
+                Code = "404"
+            };
+        }
+
+        var productDtos = products.Select(p => new GetAllProductDto
+        {
+            Id = p.Id,
+            Name = p.Name,
+            Slug = p.Slug,
+            Price = p.Price,
+            IsFeatured = p.IsFeatured
+        }).ToList();
+
+        return new ResultDto
+        {
+            Success = true,
+            Message = "Arama sonuçları başarıyla getirildi.",
+            Data = productDtos,
+            Code = "200"
+        };
+    }
+
+    public async Task<ResultDto> DeleteProductAsync(Guid id, string deletedBy, CancellationToken cancellationToken = default)
+    {
+        var product = await _context.Products.FirstOrDefaultAsync(p => p.Id == id && p.IsActive, cancellationToken);
 
         if (product == null)
         {
@@ -251,7 +327,7 @@ public class ProductService : IProductService
 
         try
         {
-            await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync(cancellationToken);
             return new ResultDto
             {
                 Success = true,

@@ -12,4 +12,11 @@ public class AppDbContext : DbContext
     public DbSet<ProductVariant> ProductVariants { get; set; }
     public DbSet<ProductVariantAttribute> ProductVariantAttributes { get; set; }
     public DbSet<ProductVariantSearchIndex> ProductVariantSearchIndexes { get; set; }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
+    }
 }

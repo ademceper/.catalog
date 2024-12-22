@@ -9,7 +9,7 @@ public class CategoryService : ICategoryService
         _context = context;
     }
 
-    public async Task<ResultDto> CreateCategoryAsync(CategoryCreateDto categoryCreateDto, string createdBy)
+    public async Task<ResultDto> CreateCategoryAsync(CategoryCreateDto categoryCreateDto, string createdBy, CancellationToken cancellationToken)
     {
         if (categoryCreateDto == null)
         {
@@ -22,7 +22,7 @@ public class CategoryService : ICategoryService
             };
         }
 
-        var category = new Category()
+        var category = new Category
         {
             Name = categoryCreateDto.Name,
             Description = categoryCreateDto.Description,
@@ -33,8 +33,9 @@ public class CategoryService : ICategoryService
 
         try
         {
-            _context.Categories.Add(category);
-            await _context.SaveChangesAsync();
+            await _context.Categories.AddAsync(category, cancellationToken);
+            await _context.SaveChangesAsync(cancellationToken);
+
             return new ResultDto
             {
                 Success = true,
@@ -55,16 +56,45 @@ public class CategoryService : ICategoryService
         }
     }
 
-    public async Task<ResultDto> GetCategoryByIdAsync(Guid id)
+    public async Task<ResultDto> GetCategoryByIdAsync(Guid id, CancellationToken cancellationToken)
     {
-        var category = await _context.Categories
+        var categoryDto = await _context.Categories
             .AsNoTracking()
-            .Where(c => c.IsActive == true)
-            .Include(c => c.SubCategories)
-            .Include(c => c.Products)
-            .FirstOrDefaultAsync(c => c.Id == id);
+            .Where(c => c.IsActive && c.Id == id)
+            .Select(c => new GetByIdCategoryDto
+            {
+                Id = c.Id,
+                Name = c.Name,
+                Description = c.Description,
+                ParentCategoryId = c.ParentCategoryId,
+                ParentCategoryName = c.ParentCategory.Name,
+                SubCategories = c.SubCategories
+                    .Where(sc => sc.IsActive)
+                    .Select(sc => new GetByIdCategoryDto 
+                    {
+                        Id = sc.Id,
+                        Name = sc.Name,
+                        Description = sc.Description
+                    }).ToList(),
+                Products = c.Products
+                    .Where(p => p.IsActive)
+                    .Select(p => new Product
+                    {
+                        Id = p.Id,
+                        Name = p.Name,
+                        Price = p.Price
+                    }).ToList(),
+                CreatedAt = c.CreatedAt,
+                UpdatedAt = c.UpdatedAt,
+                DeletedAt = c.DeletedAt,
+                IsActive = c.IsActive,
+                CreatedBy = c.CreatedBy,
+                UpdatedBy = c.UpdatedBy,
+                DeletedBy = c.DeletedBy
+            })
+            .FirstOrDefaultAsync(cancellationToken);
 
-        if (category == null)
+        if (categoryDto == null)
         {
             return new ResultDto
             {
@@ -75,34 +105,6 @@ public class CategoryService : ICategoryService
             };
         }
 
-        var categoryDto = new GetByIdCategoryDto
-        {
-            Id = category.Id,
-            Name = category.Name,
-            Description = category.Description,
-            ParentCategoryId = category.ParentCategoryId,
-            ParentCategoryName = category.ParentCategory?.Name,
-            SubCategories = category.SubCategories.Select(sc => new GetByIdCategoryDto
-            {
-                Id = sc.Id,
-                Name = sc.Name,
-                Description = sc.Description
-            }).ToList(),
-            Products = category.Products.Select(p => new Product
-            {
-                Id = p.Id,
-                Name = p.Name,
-                Price = p.Price
-            }).ToList(),
-            CreatedAt = category.CreatedAt,
-            UpdatedAt = category.UpdatedAt,
-            DeletedAt = category.DeletedAt,
-            IsActive = category.IsActive,
-            CreatedBy = category.CreatedBy,
-            UpdatedBy = category.UpdatedBy,
-            DeletedBy = category.DeletedBy
-        };
-
         return new ResultDto
         {
             Success = true,
@@ -112,23 +114,17 @@ public class CategoryService : ICategoryService
         };
     }
 
-    public async Task<ResultDto> GetAllCategoriesAsync()
+    public async Task<ResultDto> GetAllCategoriesAsync(CancellationToken cancellationToken)
     {
-        var categories = await _context.Categories
-        .AsNoTracking()
-        .Where(c => c.IsActive == true)
-        .Select(category => new
-        {
-            category.Id,
-            category.Name
-        })
-            .ToListAsync();
-
-        var categoryDtos = categories.Select(category => new
-        {
-            category.Id,
-            category.Name
-        }).ToList();
+        var categoryDtos = await _context.Categories
+            .AsNoTracking()
+            .Where(c => c.IsActive)
+            .Select(c => new 
+            {
+                c.Id,
+                c.Name
+            })
+            .ToListAsync(cancellationToken);
 
         return new ResultDto
         {
@@ -139,9 +135,9 @@ public class CategoryService : ICategoryService
         };
     }
 
-    public async Task<ResultDto> UpdateCategoryAsync(Guid id, CategoryUpdateDto categoryUpdateDto, string updatedBy)
+    public async Task<ResultDto> UpdateCategoryAsync(Guid id, CategoryUpdateDto categoryUpdateDto, string updatedBy, CancellationToken cancellationToken)
     {
-        var category = await _context.Categories.FindAsync(id);
+        var category = await _context.Categories.FirstOrDefaultAsync(c => c.Id == id && c.IsActive, cancellationToken);
 
         if (category == null)
         {
@@ -162,7 +158,7 @@ public class CategoryService : ICategoryService
 
         try
         {
-            await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync(cancellationToken);
             return new ResultDto
             {
                 Success = true,
@@ -183,9 +179,9 @@ public class CategoryService : ICategoryService
         }
     }
 
-    public async Task<ResultDto> DeleteCategoryAsync(Guid id, string deletedBy)
+    public async Task<ResultDto> DeleteCategoryAsync(Guid id, string deletedBy, CancellationToken cancellationToken)
     {
-        var category = await _context.Categories.FindAsync(id);
+        var category = await _context.Categories.FirstOrDefaultAsync(c => c.Id == id && c.IsActive, cancellationToken);
 
         if (category == null)
         {
@@ -204,7 +200,7 @@ public class CategoryService : ICategoryService
 
         try
         {
-            await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync(cancellationToken);
             return new ResultDto
             {
                 Success = true,
