@@ -34,7 +34,7 @@ public class ProductController : ControllerBase
     public async Task<ActionResult<ResultDto>> UpdateProduct(Guid id, [FromBody] ProductUpdateDto productUpdateDto, CancellationToken cancellationToken)
     {
         var updatedBy = "system";
-        var result = await _productService.UpdateProductAsync(id, productUpdateDto, updatedBy, cancellationToken);
+        var result = await _productService.UpdateProductAsync(productUpdateDto, updatedBy, cancellationToken);
 
         if (result.Success)
         {
@@ -62,8 +62,6 @@ public class ProductController : ControllerBase
     public async Task<ActionResult<ResultDto>> GetAllProducts(CancellationToken cancellationToken)
     {
         var result = await _productService.GetAllProductsAsync(cancellationToken);
-        // Bu istek genellikle her zaman başarıyla sonuçlanırsa direkt Ok döndürülebilir.
-        // Ancak yine de hata kontrolü yapmak isterseniz aşağıdaki gibi yapılabilir:
         if (result.Success)
         {
             return Ok(result);

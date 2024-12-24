@@ -5,9 +5,12 @@ public class ProductService : IProductService
 {
     private readonly AppDbContext _context;
 
-    public ProductService(AppDbContext context)
+    private readonly IRabbitMqService _rabbitMqService;
+
+    public ProductService(AppDbContext context, IRabbitMqService rabbitMq)
     {
         _context = context;
+        _rabbitMqService = rabbitMq;
     }
 
     public async Task<ResultDto> CreateProductAsync(ProductCreateDto productCreateDto, string createdBy, CancellationToken cancellationToken = default)
@@ -114,6 +117,8 @@ public class ProductService : IProductService
                     _context.ProductAttributes.Add(productAttribute);
                 }
             }
+            
+            _rabbitMqService.PublishCreateJson(productCreateDto); 
 
             await _context.SaveChangesAsync(cancellationToken);
 
@@ -138,9 +143,9 @@ public class ProductService : IProductService
     }
 
 
-    public async Task<ResultDto> UpdateProductAsync(Guid id, ProductUpdateDto productUpdateDto, string updatedBy, CancellationToken cancellationToken = default)
+    public async Task<ResultDto> UpdateProductAsync(ProductUpdateDto productUpdateDto, string updatedBy, CancellationToken cancellationToken = default)
     {
-        var product = await _context.Products.FirstOrDefaultAsync(p => p.Id == id && p.IsActive, cancellationToken);
+        var product = await _context.Products.FirstOrDefaultAsync(p => p.Id == productUpdateDto.Id && p.IsActive, cancellationToken);
 
         if (product == null)
         {
@@ -168,6 +173,7 @@ public class ProductService : IProductService
 
         try
         {
+            _rabbitMqService.PublishUpdateJson(productUpdateDto);
             await _context.SaveChangesAsync(cancellationToken);
             return new ResultDto
             {

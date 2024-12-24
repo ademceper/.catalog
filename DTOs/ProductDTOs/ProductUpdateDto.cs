@@ -1,5 +1,6 @@
 public class ProductUpdateDto
 {
+    public Guid Id { get; set; }
     public string Name { get; set; }  // Ürün adı
     public string Slug { get; set; }  // SEO dostu URL (slug)
     public string Description { get; set; }  // Ürün açıklaması
